@@ -46,6 +46,58 @@ class UserController {
         const token = generateJwt(req.user.id, req.user.email, req.user.role)
         return res.json({token})
     }
+
+    async create(req, res) {
+        const {fullname, email, dob, password} = req.body
+        const user = await User.create({fullname, email, dob, password: hashPassword})
+        return res.json({user})
+    }
+
+    async getAll(req, res) {
+        const users = await User.findAll()
+        return res.json(users)
+    }
+
+    async getOne(req, res) {
+        const {id} = req.params
+        if(!id) {
+            return res.status(403).json({message: "Id не указан"})
+        }
+        const user = await User.findOne(
+            {where: {id}}
+        )
+        res.json(user)
+    }
+
+
+
+    async update(req, res) {
+        const {id} = req.params
+        const user = req.body
+        // if(!id) {
+        //     res.status(400).json({message: "Id не указан"})
+        // }
+        const updatedUser = await User.update(user, {where: {id: user.id}})
+        // const updatedUser = await User.update({where: {id: user.id}})
+
+        return res.json({updatedUser})
+    }
+
+
+    async delete(req, res) {
+        try {
+            const {id} = req.params
+            if (!id) {
+                res.status(400).json({message: "Id не указан"})
+            }
+            const destroyUser = await User.destroy(
+                {where: {id}}
+            )
+            res.json(destroyUser)
+        } catch (e) {
+            res.status(500).json(e)
+        }
+    }
 }
 
 
