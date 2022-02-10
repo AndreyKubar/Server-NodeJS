@@ -1,7 +1,8 @@
 const ApiError = require('../error/apiError')
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
-const {User} = require('../models/models')
+
+const {User} = require('../models')
 
 const generateJwt = (id, email, role) => {
     return jwt.sign(
@@ -10,6 +11,8 @@ const generateJwt = (id, email, role) => {
         {expiresIn: '24h'}
         )
 }
+
+
 
 class UserController {
     async registration(req, res, next) {
@@ -36,7 +39,7 @@ class UserController {
         }
         let comparePassword = bcrypt.compareSync(password, user.password)
         if (!comparePassword) {
-            return next(ApiError.internal('ВВеден неверный пароль'))
+            return next(ApiError.internal('Введен неверный пароль'))
         }
         const token = generateJwt(user.id, user.email, user.role)
         return res.json({token})
@@ -49,38 +52,56 @@ class UserController {
 
     async create(req, res) {
         const {fullname, email, dob, password} = req.body
-        const user = await User.create({fullname, email, dob, password: hashPassword})
-        return res.json({user})
+        try {
+            const hashPassword = await bcrypt.hash(password, 5)
+            const user = await User.create({fullname, email, dob, password: hashPassword})
+            return res.json({user})
+        } catch (e) {
+            console.log(e);
+            return  res.status(500).json(e)
+        
+        }
     }
 
     async getAll(req, res) {
-        const users = await User.findAll()
-        return res.json(users)
+        try {
+            const users = await User.findAll()
+            return res.json(users)
+        } catch (e) {
+            return  res.status(500).json(e)
+            
+        }
     }
 
     async getOne(req, res) {
         const {id} = req.params
-        if(!id) {
-            return res.status(403).json({message: "Id не указан"})
+        try {
+            if(!id) {
+                return res.status(403).json({message: "Id не указан"})
+            }
+            const user = await User.findOne(
+                {where: {id}}
+            )
+            res.json(user)
+        } catch (e) {
+            return  res.status(500).json(e)
+            
         }
-        const user = await User.findOne(
-            {where: {id}}
-        )
-        res.json(user)
     }
 
 
 
     async update(req, res) {
-        const {id} = req.params
-        const user = req.body
-        // if(!id) {
-        //     res.status(400).json({message: "Id не указан"})
-        // }
-        const updatedUser = await User.update(user, {where: {id: user.id}})
-        // const updatedUser = await User.update({where: {id: user.id}})
+        try {
+            const user = req.body
 
-        return res.json({updatedUser})
+            const updatedUser = await User.update(user, {where: {id: req.params.id}, returning: true})
+    
+            return res.json(updatedUser[1])
+        } catch (e) {
+            res.status(500).json(e)
+            
+        }
     }
 
 
@@ -91,9 +112,11 @@ class UserController {
                 res.status(400).json({message: "Id не указан"})
             }
             const destroyUser = await User.destroy(
-                {where: {id}}
+                {where: {id},
+                returning: true
+                }
             )
-            res.json(destroyUser)
+            return res.json(destroyUser[1])
         } catch (e) {
             res.status(500).json(e)
         }
