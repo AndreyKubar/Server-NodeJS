@@ -1,21 +1,25 @@
+const express = require('express');
+const validator = require('express-joi-validation').createValidator({});
 
-const Router = require('express')
+const { UserController } = require('../controllers/userController');
+const { AuthController } = require('../controllers/auth');
+const {
+  signUpSchema,
+  signInSchema,
+  createUserSchema,
+  updateUserSchema,
+} = require('../validation/index');
+const authMiddleware = require('../middleware/authMiddleware');
 
-const userController = require('../controllers/userController')
-const authMiddleware = require('../middleware/authMiddleware')
+const router = express.Router();
 
-const router = new Router()
+router.post('/user', authMiddleware, validator.body(createUserSchema), (req, res) => UserController.createUser(req, res));
+router.get('/user', authMiddleware, (req, res) => UserController.getUsers(req, res));
+router.get('/user/:id', authMiddleware, (req, res) => UserController.getOneUser(req, res));
+router.put('/user/:id', authMiddleware, validator.body(updateUserSchema), (req, res) => UserController.updateUser(req, res));
+router.delete('/user/:id', authMiddleware, (req, res) => UserController.deleteUser(req, res));
 
+router.post('/signUp', validator.body(signUpSchema), (req, res) => AuthController.signUp(req, res));
+router.post('/signIn', validator.body(signInSchema), (req, res) => AuthController.signIn(req, res));
 
-
-router.post('/registration', userController.registration)
-router.post('/login', userController.login)
-router.post('/', userController.create)
-router.get('/', userController.getAll)
-router.get('/:id', userController.getOne)
-router.put('/:id', userController.update)
-router.delete('/:id', userController.delete)
-router.get('/auth', authMiddleware, userController.check)
-
-
-module.exports = router
+module.exports = router;

@@ -1,127 +1,83 @@
-const ApiError = require('../error/apiError')
-const bcrypt = require('bcrypt')
-const jwt = require('jsonwebtoken')
+const bcrypt = require('bcrypt');
 
-const {User} = require('../models')
-
-const generateJwt = (id, email, role) => {
-    return jwt.sign(
-        {id, email, role}, 
-        process.env.SECRET_KEY,
-        {expiresIn: '24h'}
-        )
-}
-
+const { User } = require('../models/user');
 
 
 class UserController {
-    async registration(req, res, next) {
-        const {fullname, email, dob, password, role} = req.body
-        if (!email ) {
-            return next(ApiError.badRequest('Все поля должны быть заполнены'))
-        }
-        const candidate = await User.findOne({where: {email}})
-        if (candidate) {
-            return next(ApiError.badRequest('Пользователь с таким email уже зарегистрирован'))
-        }
-        const hashPassword = await bcrypt.hash(password, 5)
-        const user = await User.create({fullname, email, dob, password: hashPassword, role})
-        const token = generateJwt(user.id, user.email, user.role)
-        return res.json({token})
+  static async createUser(req, res) {
+    try {
+      const { fullname, email, password, dob } = req.body
 
+      const salt = bcrypt.genSaltSync(10);
+
+      const user = await User.create({
+        fullname: fullname,
+        email: email,
+        password: bcrypt.hashSync(password, salt),
+        salt: salt,
+        dob: dob,
+      })
+
+      res.json(user);
+    } catch (e) {
+      return e;
     }
+  };
 
-    async login(req, res, next) {
-        const {email, password} = req.body
-        const user = await User.findOne({where: {email}})
-        if(!user) {
-            return next(ApiError.internal('Пользователь с таким именем не найден'))
-        }
-        let comparePassword = bcrypt.compareSync(password, user.password)
-        if (!comparePassword) {
-            return next(ApiError.internal('Введен неверный пароль'))
-        }
-        const token = generateJwt(user.id, user.email, user.role)
-        return res.json({token})
+  static async getUsers(req, res) {
+    try {
+      const users = await User.findAll();
+      res.json(users);
+    } catch (e) {
+      return e;
     }
+  };
 
-    async check(req, res, next) {
-        const token = generateJwt(req.user.id, req.user.email, req.user.role)
-        return res.json({token})
+  static async getOneUser(req, res) {
+    try {
+      const user = await User.findOne({ id: req.body.id });
+      res.json(user);
+    } catch (e) {
+      return e;
     }
+  };
 
-    async create(req, res) {
-        const {fullname, email, dob, password} = req.body
-        try {
-            const hashPassword = await bcrypt.hash(password, 5)
-            const user = await User.create({fullname, email, dob, password: hashPassword})
-            return res.json({user})
-        } catch (e) {
-            console.log(e);
-            return  res.status(500).json(e)
-        
+  static async updateUser(req, res) {
+    try {
+      const { fullname, email, dob } = req.body
+
+      const user = await User.update({
+        fullname: fullname,
+        email: email,
+        dob: dob,
+      },
+        {
+          where: {
+            id: req.params.id
+          }
         }
-    }
+      );
 
-    async getAll(req, res) {
-        try {
-            const users = await User.findAll()
-            return res.json(users)
-        } catch (e) {
-            return  res.status(500).json(e)
-            
+      res.json(user)
+    } catch (e) {
+      return e;
+    }
+  };
+
+  static async deleteUser(req, res) {
+    try {
+      const deletedUser = await User.destroy({
+        where: {
+          id: req.params.id
         }
+      })
+      res.json(deletedUser);
+    } catch (e) {
+      return e;
     }
+  };
+};
 
-    async getOne(req, res) {
-        const {id} = req.params
-        try {
-            if(!id) {
-                return res.status(403).json({message: "Id не указан"})
-            }
-            const user = await User.findOne(
-                {where: {id}}
-            )
-            res.json(user)
-        } catch (e) {
-            return  res.status(500).json(e)
-            
-        }
-    }
-
-
-
-    async update(req, res) {
-        try {
-            const user = req.body
-
-            const updatedUser = await User.update(user, {where: {id: req.params.id}, returning: true})
-    
-            return res.json(updatedUser[1])
-        } catch (e) {
-            res.status(500).json(e)
-            
-        }
-    }
-
-
-    async delete(req, res) {
-        try {
-            const {id} = req.params
-            if (!id) {
-                res.status(400).json({message: "Id не указан"})
-            }
-            const destroyUser = await User.destroy(
-                {where: {id},
-                returning: true
-                }
-            )
-            return res.json(destroyUser[1])
-        } catch (e) {
-            res.status(500).json(e)
-        }
-    }
-}
-
-
-module.exports = new UserController()
+module.exports = {
+  UserController,
+};
