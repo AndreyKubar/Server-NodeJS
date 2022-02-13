@@ -13,13 +13,13 @@ const authMiddleware = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-router.post('/user', authMiddleware, validator.body(createUserSchema), (req, res) => UserController.createUser(req, res));
-router.get('/user', authMiddleware, (req, res) => UserController.getUsers(req, res));
-router.get('/user/:id', authMiddleware, (req, res) => UserController.getOneUser(req, res));
-router.put('/user/:id', authMiddleware, validator.body(updateUserSchema), (req, res) => UserController.updateUser(req, res));
-router.delete('/user/:id', authMiddleware, (req, res) => UserController.deleteUser(req, res));
+router.post('/user', authMiddleware, validator.body(createUserSchema), UserController.createUser);
+router.get('/user', authMiddleware, UserController.getUsers);
+router.get('/user/:id', authMiddleware, UserController.getOneUser);
+router.put('/user/:id', authMiddleware, validator.body(updateUserSchema), UserController.updateUser);
+router.delete('/user/:id', authMiddleware, UserController.deleteUser);
 
-router.post('/signUp', validator.body(signUpSchema), (req, res) => AuthController.signUp(req, res));
-router.post('/signIn', validator.body(signInSchema), (req, res) => AuthController.signIn(req, res));
+router.post('/signUp', validator.body(signUpSchema), AuthController.signUp);
+router.post('/signIn', validator.body(signInSchema), AuthController.signIn);
 
 module.exports = router;
